@@ -117,83 +117,68 @@ class TempScalingOnECE(nn.Module):
         return self.temperature.item()
 
 class TempScalingOnEceGivenAcc(nn.Module):
-    def __init__(self, hybrid = False, acc_fix = None):
+    def __init__(self, acc_fix = None):
         super(TempScalingOnEceGivenAcc, self).__init__()
         self.n_bins = 15
-        self.hybrid = hybrid
         self.acc_fix = acc_fix
 
-    def find_best_T(self, logits, acc_list=None, source_logits=None, source_labels=None, optimizer = 'fmin', conf_ratio = None):
+    def find_best_T(self, logits, acc_list=None, source_logits=None, source_labels=None):
         ece_criterion = ECELoss(n_bins=self.n_bins)
         def eval(x):
             "x ==> temperature T"
             if type(x) != np.float64:
                 x = torch.from_numpy(x)
             scaled_logits = logits.float() / x
-            loss = ece_criterion.forward_given_acc(scaled_logits, acc_list, conf_ratio=conf_ratio)
+            loss = ece_criterion.forward_given_acc(scaled_logits, acc_list)
             return loss
 
-        if optimizer == 'fmin':
-            optimal_parameter = optimize.fmin(eval, torch.Tensor([2.0]), disp=False)
-            self.temperature = optimal_parameter[0]
-        elif optimizer == 'brute':
-            rranges = np.arange(0.5,4,0.01)
-            best_ece = 100
-            best_tmp = None
-            for tmp in rranges:
-                if self.hybrid:
-                    acc_list = get_accuracy_of_bins(source_logits / tmp, source_labels, bins = 15)
-                else:
-                    acc_list = get_accuracy_of_bins(source_logits, source_labels, bins = 15, ada=False)
-                if type(self.acc_fix) != type(None):
-                    acc_list = [item * self.acc_fix.item() for item in acc_list]
-                ece = eval(tmp)
-                if ece < best_ece:
-                    best_ece = ece
-                    best_tmp = tmp
 
-            self.temperature = best_tmp
+        acc_list = get_accuracy_of_bins(source_logits, source_labels, bins = 15, ada=False)
+        rranges = np.arange(0.5,4,0.01)
+        best_ece = 100
+        best_tmp = None
+        for tmp in rranges:
+            if type(self.acc_fix) != type(None):
+                acc_list = [item * self.acc_fix.item() for item in acc_list]
+            ece = eval(tmp)
+            if ece < best_ece:
+                best_ece = ece
+                best_tmp = tmp
+
+        self.temperature = best_tmp
 
         return self.temperature.item()
 
 
 class TempScalingOnAdaEceGivenAcc(nn.Module):
-    def __init__(self, hybrid = False, acc_fix = None):
+    def __init__(self, acc_fix = None):
         super(TempScalingOnAdaEceGivenAcc, self).__init__()
         self.n_bins = 15
-        self.hybrid = hybrid
         self.acc_fix = acc_fix
 
-    def find_best_T(self, logits, acc_list=None, source_logits=None, source_labels=None, optimizer = 'fmin', conf_ratio = None):
+    def find_best_T(self, logits, acc_list=None, source_logits=None, source_labels=None):
         ece_criterion = AdaptiveECELoss(n_bins=self.n_bins)
         def eval(x):
             "x ==> temperature T"
             if type(x) != np.float64:
                 x = torch.from_numpy(x)
             scaled_logits = logits.float() / x
-            loss = ece_criterion.forward_given_acc(scaled_logits, acc_list, conf_ratio=conf_ratio)
+            loss = ece_criterion.forward_given_acc(scaled_logits, acc_list)
             return loss
 
-        if optimizer == 'fmin':
-            optimal_parameter = optimize.fmin(eval, torch.Tensor([2.0]), disp=False)
-            self.temperature = optimal_parameter[0]
-        elif optimizer == 'brute':
-            rranges = np.arange(0.5,4,0.01)
-            best_ece = 100
-            best_tmp = None
-            for tmp in rranges:
-                if self.hybrid:
-                    acc_list = get_accuracy_of_bins(source_logits / tmp, source_labels, bins = 15, ada=True)
-                else:
-                    acc_list = get_accuracy_of_bins(source_logits, source_labels, bins = 15, ada=True)
-                if type(self.acc_fix) != type(None):
-                    acc_list = [item * self.acc_fix.item() for item in acc_list]
-                ece = eval(tmp)
-                if ece < best_ece:
-                    best_ece = ece
-                    best_tmp = tmp
+        rranges = np.arange(0.5,4,0.01)
+        best_ece = 100
+        best_tmp = None
+        acc_list = get_accuracy_of_bins(source_logits, source_labels, bins = 15, ada=True)
+        for tmp in rranges:
+            if type(self.acc_fix) != type(None):
+                acc_list = [item * self.acc_fix.item() for item in acc_list]
+            ece = eval(tmp)
+            if ece < best_ece:
+                best_ece = ece
+                best_tmp = tmp
 
-            self.temperature = best_tmp
+        self.temperature = best_tmp
 
         return self.temperature.item()
 
@@ -237,7 +222,6 @@ def VectorOrMatrixScaling(logits, labels, outputs_target, labels_target, cal_met
     # Calculate NLL and ECE before vector scaling or matrix scaling
     before_calibration_nll = nll_criterion(outputs_target, labels_target).item()
     before_calibration_ece = ece_criterion(outputs_target, labels_target).item()
-    # print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_calibration_nll, before_calibration_ece))
 
     max_iter = 5000 
     for _ in range(max_iter):
@@ -251,8 +235,7 @@ def VectorOrMatrixScaling(logits, labels, outputs_target, labels_target, cal_met
     # Calculate NLL and ECE after temperature scaling
     after_calibration_nll = nll_criterion(final_output, labels_target).item()
     after_calibration_ece = ece_criterion(final_output, labels_target).item()
-    # print('Optimal temperature: %.3f' % self.temperature.item())
-    # print('After temperature - NLL: %.3f, ECE: %.3f' % (after_calibration_nll, after_calibration_ece))
+
     return after_calibration_ece
 
 
@@ -346,25 +329,11 @@ class TransCal(nn.Module):
             loss = np.abs(confidence - estimated_acc)
             return loss
 
-        # tmp_rranges = np.arange(1,10,0.05)
-        # lambda_rranges = np.arange(0,1.01,0.01)
-        # val_min = 10000
-        # for tmp in tmp_rranges:
-        #     for lmbd in lambda_rranges:
-        #         val = eval((tmp, lmbd))
-        #         if val < val_min:
-        #             val_min = val
-        #             best_lmbd = lmbd
-        #             best_tmp = tmp
-
         # return best_tmp
         rranges = (slice(1,10,0.05), slice(0,1.01,0.01))
         optimal_parameter = optimize.brute(eval, rranges, finish=optimize.fmin)
         self.temperature = optimal_parameter[0]
 
-        # bnds = ((1.0, None), (0.0, 1.0))
-        # optimal_parameter = minimize(eval, np.array([2.0, 0.5]), method='SLSQP', bounds=bnds)
-        # self.temperature = optimal_parameter.x[0]
         return self.temperature.item()
 
 class Oracle(nn.Module):
@@ -446,7 +415,7 @@ class AdaptiveECELoss(nn.Module):
                 ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
         return ece
 
-    def forward_given_acc(self, logits, acc, conf_ratio = None):
+    def forward_given_acc(self, logits, acc):
         if self.LOGIT:
             softmaxes = F.softmax(logits, dim=1)
         else:
@@ -469,8 +438,6 @@ class AdaptiveECELoss(nn.Module):
                     accuracy_in_bin = max(accuracy_in_bin, 0.01)
                     avg_confidence_in_bin = confidences[in_bin].mean().float()
 
-                    if conf_ratio is not None:
-                        prop_in_bin = prop_in_bin * conf_ratio[idx]
                     ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
         return ece
 
@@ -542,42 +509,7 @@ class ECELoss(nn.Module):
 
         return ece
 
-    def forward_with_noisy_labels(self, logits, labels, epsilon, num_classes = 10):
-        if self.LOGIT:
-            softmaxes = F.softmax(logits, dim=1)
-        else:
-            softmaxes = logits
-        confidences, predictions = torch.max(softmaxes, 1)
-        correctness = predictions.eq(labels)
-        confidences[confidences == 1] = 0.999999
-        ece = torch.zeros(1, device=logits.device)
-
-        for bin_lower, bin_upper in zip(self.bin_lowers, self.bin_uppers):
-            # Calculated |confidence - accuracy| in each bin
-            in_bin = confidences.gt(bin_lower.item()) * confidences.le(bin_upper.item())
-            prop_in_bin = in_bin.float().mean()
-
-            if (prop_in_bin.item() > 0) and (in_bin.sum() > 10):
-                accuracy_in_bin = correctness[in_bin].float().mean()
-                accuracy_in_bin = min(accuracy_in_bin, 0.99)
-                accuracy_in_bin = max(accuracy_in_bin, 0.01)
-                accuracy_in_bin = (accuracy_in_bin - (epsilon / (num_classes-1))) / (1 - epsilon - (epsilon / (num_classes - 1)))
-                # accuracy_in_bin = (accuracy_in_bin - (epsilon / num_classes)) / (1 - epsilon)
-
-                avg_confidence_in_bin = confidences[in_bin].mean().float()
-                ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
-        return ece
-    
-    def forward_given_histograms(self, conf, acc, prop):
-        ece = 0
-        for idx, (bin_lower, bin_upper) in enumerate(zip(self.bin_lowers, self.bin_uppers)):
-            if prop[idx] <= 0:
-                continue
-            else:
-                ece += torch.abs(conf[idx] - acc[idx]) * prop[idx]
-        return ece
-
-    def forward_given_acc(self, logits, acc, conf_ratio = None):
+    def forward_given_acc(self, logits, acc):
         if self.LOGIT:
             softmaxes = F.softmax(logits, dim=1)
         else:
@@ -597,8 +529,6 @@ class ECELoss(nn.Module):
                     accuracy_in_bin = max(accuracy_in_bin, 0.01)
                     avg_confidence_in_bin = confidences[in_bin].mean().float()
 
-                    if conf_ratio is not None:
-                        prop_in_bin = prop_in_bin * conf_ratio[idx]
                     ece += torch.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
         return ece
 

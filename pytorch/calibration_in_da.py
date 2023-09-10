@@ -4,13 +4,15 @@ import torch.nn as nn
 import csv
 import os
 import time
-from utils import ECELoss, \
-                    CPCS, \
-                    TransCal, \
-                    Oracle, \
-                    TempScalingOnECE, \
-                    TempScalingOnEceGivenAcc, \
-                    TempScalingOnAdaEceGivenAcc
+from utils import (
+    ECELoss,
+    CPCS,
+    TransCal,
+    Oracle,
+    TempScalingOnECE,
+    TempScalingOnEceGivenAcc,
+    TempScalingOnAdaEceGivenAcc
+)
 import pandas as pd
 
 
@@ -97,27 +99,7 @@ def calibration_in_DA(logits_source_val,
         optimal_temp = cal_model.find_best_T(logits_target, labels_target, optimizer=optimizer)
 
 
-    # ------------------------------- HTTS ----------------------------------------------------- #
-
-    elif cal_method == 'hist_transfer_hybrid_acc_fix':
-        cal_model = TempScalingOnEceGivenAcc(hybrid = True, acc_fix = acc_fix)
-        optimal_temp = cal_model.find_best_T(logits_target, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
-    
-    elif cal_method == 'hist_transfer_hybrid_acc_fix_ada':
-        cal_model = TempScalingOnAdaEceGivenAcc(hybrid = True, acc_fix = acc_fix)
-        optimal_temp = cal_model.find_best_T(logits_target, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
-
-    # ------------------------------ Ablation - On source (HTTS-S) ----------------------------- #
-
-    elif cal_method == 'hist_transfer_hybrid_acc_fix_on_source':
-        cal_model = TempScalingOnEceGivenAcc(hybrid = True, acc_fix = acc_fix)
-        optimal_temp = cal_model.find_best_T(logits_source_val, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
-    
-    elif cal_method == 'hist_transfer_hybrid_acc_fix_ada_on_source':
-        cal_model = TempScalingOnAdaEceGivenAcc(hybrid = True, acc_fix = acc_fix)
-        optimal_temp = cal_model.find_best_T(logits_source_val, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
-
-    # ------------------------------ Ablation - Fixed bins (HTTS-FA) --------------------------- #
+    # ---------------- HTTS (Histogram transfer Temperature Scaling) --------------------------- #
 
     elif cal_method == 'hist_transfer_acc_fix':
         cal_model = TempScalingOnEceGivenAcc(hybrid = False, acc_fix = acc_fix)
@@ -126,7 +108,8 @@ def calibration_in_DA(logits_source_val,
     elif cal_method == 'hist_transfer_acc_fix_ada':
         cal_model = TempScalingOnAdaEceGivenAcc(hybrid = False, acc_fix = acc_fix)
         optimal_temp = cal_model.find_best_T(logits_target, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
-
+    
+    # ------------------------------------------------------------------------------------------ #
 
     else:
         print (f'{cal_method} not exists')
