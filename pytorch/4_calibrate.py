@@ -88,12 +88,12 @@ def compute_ece(method,
     ]
 
 
-    htts_methods = [
-        'hist_transfer_hybrid_acc_fix',
-        'hist_transfer_hybrid_acc_fix_ada',                 
+    UTDC_methods = [
+        'UTDC',
+        'UTDC_ada',                 
     ]
 
-    methods = methods + htts_methods
+    methods = methods + UTDC_methods
     for i in range(10):
         weight = get_weight_union(features_source_train, features_target, features_source_val)
         results = sweep_on_calibration_methods(logits_source_val = logits_source_val, 
