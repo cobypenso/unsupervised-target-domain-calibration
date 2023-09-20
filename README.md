@@ -1,7 +1,7 @@
-Code release for ["Network Calibration under Distribution Shift based on Estimating the  Target Domain Accuracy"]
+Code release for ["NETWORK CALIBRATION UNDER DOMAIN SHIFT BASED ON ESTIMATING THE TARGET DOMAIN ACCURACY"]
 
 
-# Histogram-Transfer Temperature scaling (HTTS) Calibration:
+# Unsupervised Target Domain Calibration (UTDC):
 ### Step 1: Train a domain adaptation model using various DA methods
 Run 'python3.6 1_train_DA_models.py'
 
