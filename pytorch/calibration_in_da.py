@@ -102,11 +102,11 @@ def calibration_in_DA(logits_source_val,
     # ---------------- Unsupervised Target Domain Calibration (UTDC) --------------------------- #
 
     elif cal_method == 'UTDC':
-        cal_model = TempScalingOnEceGivenAcc(hybrid = False, acc_fix = acc_fix)
+        cal_model = TempScalingOnEceGivenAcc(acc_fix = acc_fix)
         optimal_temp = cal_model.find_best_T(logits_target, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
     
     elif cal_method == 'UTDC_ada':
-        cal_model = TempScalingOnAdaEceGivenAcc(hybrid = False, acc_fix = acc_fix)
+        cal_model = TempScalingOnAdaEceGivenAcc(acc_fix = acc_fix)
         optimal_temp = cal_model.find_best_T(logits_target, source_logits=logits_source_val, source_labels=labels_source_val, optimizer=optimizer)
     
     # ------------------------------------------------------------------------------------------ #
