@@ -345,22 +345,22 @@ def estimate_target_acc(config, model):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Conditional Domain Adversarial Network')
-    parser.add_argument('--method', type=str, default= 'CDAN+E', choices=['CDAN', 'CDAN+E', 'DANN', 'DANN+E'])
-    parser.add_argument('--net', type=str, default='ResNet18', choices=["ResNet18", "ResNet34", "ResNet50", "ResNet101", "ResNet152"])
+    parser.add_argument('--method', type=str, default= 'CDAN+E', choices=['CDAN+E', 'DANN', 'DANN+E'])
+    parser.add_argument('--net', type=str, default='ResNet18', choices=["ResNet18"])
 
     
-    parser.add_argument('--dataset', type=str, default='office-home', choices=['office31', 'image-clef', 'visda', 'office-home','domainnet'],
+    parser.add_argument('--dataset', type=str, default='office-home', choices=['office31', 'office-home'],
                         help="The dataset or source dataset used")
 
 
-    parser.add_argument('--source', type=str, default='Real_World')
-    parser.add_argument('--target', type=str, default='Art')
+    parser.add_argument('--source', type=str, default='Art')
+    parser.add_argument('--target', type=str, default='Real_World')
     parser.add_argument('--output_folder', type=str)
     # -----------------------------------
 
 
     # name of dataset - source
-    parser.add_argument('--dset', type=str, default='office-home', choices=['office31', 'visda', 'office-home'],
+    parser.add_argument('--dset', type=str, default='office-home', choices=['office31', 'office-home'],
                         help="The dataset or source dataset used")    # source dataset path
     parser.add_argument('--s_train_dset_path', type=str, default=None, help="The source train dataset path list")
     
@@ -369,7 +369,7 @@ if __name__ == "__main__":
                         default=None, help="The source validation dataset path list")
 
     parser.add_argument('--new_version', type=bool, default=False)
-    parser.add_argument('--num_sets', type=int, default=3000)
+    parser.add_argument('--num_sets', type=int, default=50)
     parser.add_argument('--random', type=bool, default=False, help="whether use random projection")
     
     args = parser.parse_args()
@@ -411,14 +411,8 @@ if __name__ == "__main__":
 
     if config["dataset"] == "office31":
         config["network"]["params"]["class_num"] = 31
-    elif config["dataset"] == "image-clef":
-        config["network"]["params"]["class_num"] = 12
-    elif config["dataset"] == "visda":
-        config["network"]["params"]["class_num"] = 12
     elif config["dataset"] == "office-home":
         config["network"]["params"]["class_num"] = 65
-    elif config["dataset"] == "domainnet":
-        config["network"]["params"]["class_num"] = 345
     else:
         raise ValueError('Dataset cannot be recognized. Please define your own dataset here.')
  
